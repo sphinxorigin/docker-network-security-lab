@@ -1,0 +1,213 @@
+services:
+
+  i2:
+    build: ./i2
+    container_name: i2
+    hostname: i2
+    cap_add: [NET_ADMIN]
+    sysctls:
+      - net.ipv4.conf.all.rp_filter=0
+      - net.ipv4.conf.default.rp_filter=0
+    privileged: true
+    networks:
+      link-i2-i3:
+        mac_address: "00:00:10:11:02:03"
+      link-i2-i4:
+        mac_address: "00:00:10:11:02:04"
+      link-i2-i5:
+        mac_address: "00:00:10:11:02:05"
+      internet-net:
+        ipv4_address: 172.30.0.2
+      
+
+  i3:
+    build: ./i3
+    container_name: i3
+    hostname: i3
+    cap_add: [NET_ADMIN]
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv4.conf.all.rp_filter=0
+      - net.ipv4.conf.default.rp_filter=0
+    networks:
+      link-i2-i3:
+        mac_address: "00:00:10:11:03:02"
+      link-i3-i4:
+        mac_address: "00:00:10:11:03:04"
+
+  i4:
+    build: ./i4
+    container_name: i4
+    hostname: i4
+    cap_add: [NET_ADMIN]
+    sysctls:
+      - net.ipv4.conf.all.rp_filter=0
+      - net.ipv4.conf.default.rp_filter=0
+    privileged: true
+    networks:
+      link-i2-i4:
+        mac_address: "00:00:10:11:04:02"
+      link-i3-i4:
+        mac_address: "00:00:10:11:04:03"
+      link-i4-i5:
+        mac_address: "00:00:10:11:04:05"
+      service-net:
+        mac_address: "00:00:10:11:04:06"
+
+  i5:
+    build: ./i5
+    container_name: i5
+    hostname: i5
+    cap_add: [NET_ADMIN]
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv4.conf.all.rp_filter=0
+      - net.ipv4.conf.default.rp_filter=0
+    networks:
+      link-i2-i5:
+        mac_address: "00:00:10:11:05:02"
+      link-i4-i5:
+        mac_address: "00:00:10:11:05:04"
+      sub-i5-homerouter:
+        mac_address: "00:00:10:11:05:10"
+
+  dns:
+    build: ./dns
+    container_name: dns
+    hostname: dns
+    cap_add: [NET_ADMIN]
+    sysctls:
+      - net.ipv4.conf.all.rp_filter=0
+      - net.ipv4.conf.default.rp_filter=0
+    networks:
+      service-net: {}
+
+  webserver:
+    build: ./webserver
+    container_name: webserver
+    hostname: webserver
+    cap_add: [NET_ADMIN]
+    sysctls:
+      - net.ipv4.conf.all.rp_filter=0
+      - net.ipv4.conf.default.rp_filter=0
+    ports:
+      - "8082:8080"
+    networks:
+      service-net:
+        ipv4_address: 100.24.0.9
+
+  homerouter:
+    build: ./homerouter
+    container_name: homerouter
+    hostname: homerouter
+    cap_add: [NET_ADMIN]
+    sysctls:
+      - net.ipv4.conf.all.rp_filter=0
+      - net.ipv4.conf.default.rp_filter=0
+    privileged: true
+    networks:
+      sub-i5-homerouter: {}
+      sub-clients: {}
+      sub-gameserver: {}
+
+  client1:
+    build: ./client1
+    container_name: client1
+    hostname: client1
+    cap_add: [NET_ADMIN]
+    sysctls:
+      - net.ipv4.conf.all.rp_filter=0
+      - net.ipv4.conf.default.rp_filter=0
+    networks:
+      sub-clients:
+        mac_address: "00:00:10:11:20:11"
+
+  client2:
+    build: ./client2
+    container_name: client2
+    hostname: client2
+    cap_add: [NET_ADMIN]
+    sysctls:
+      - net.ipv4.conf.all.rp_filter=0
+      - net.ipv4.conf.default.rp_filter=0
+    networks:
+      sub-clients:
+        mac_address: "00:00:10:11:21:11"
+
+  client3:
+    build: ./client3
+    container_name: client3
+    hostname: client3
+    cap_add: [NET_ADMIN]
+    sysctls:
+      - net.ipv4.conf.all.rp_filter=0
+      - net.ipv4.conf.default.rp_filter=0
+    networks:
+      sub-clients:
+        mac_address: "00:00:10:11:22:11"
+
+  gameserver:
+    build: ./gameserver
+    container_name: gameserver
+    hostname: gameserver
+    cap_add: [NET_ADMIN]
+    sysctls:
+      - net.ipv4.conf.all.rp_filter=0
+      - net.ipv4.conf.default.rp_filter=0
+    networks:
+      sub-gameserver:
+        mac_address: "00:00:10:11:11:10"
+
+
+networks:
+
+  link-i2-i3:
+    ipam:
+      config:
+        - subnet: 172.19.10.0/29
+
+  link-i2-i4:
+    ipam:
+      config:
+        - subnet: 172.19.10.8/29
+
+  link-i2-i5:
+    ipam:
+      config:
+        - subnet: 172.19.10.16/29
+
+  link-i3-i4:
+    ipam:
+      config:
+        - subnet: 172.19.10.24/29
+
+  link-i4-i5:
+    ipam:
+      config:
+        - subnet: 172.19.10.32/29
+
+  internet-net:
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
+
+  service-net:
+    ipam:
+      config:
+        - subnet: 100.24.0.0/24
+          gateway: 100.24.0.254
+
+  sub-i5-homerouter:
+    ipam:
+      config:
+        - subnet: 10.10.10.0/29
+
+  sub-clients:
+    ipam:
+      config:
+        - subnet: 192.168.0.0/24
+
+  sub-gameserver:
+    ipam:
+      config:
+        - subnet: 192.168.1.0/24

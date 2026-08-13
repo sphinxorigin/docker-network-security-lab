@@ -1,0 +1,15 @@
+$TTL    604800
+@       IN      SOA     dns.wirn.htw. admin.wirn.htw. (
+                          1         ; Serial
+                     604800         ; Refresh
+                      86400         ; Retry
+                    2419200         ; Expire
+                     604800 )       ; Negative Cache TTL
+;
+@               IN      NS      dns.wirn.htw.
+i2              IN      A       100.96.0.2
+i3              IN      A       100.96.0.3
+i4              IN      A       100.96.0.4
+i5              IN      A       100.96.0.5
+dns             IN      A       100.96.0.8
+webserver       IN      A       100.96.0.9
