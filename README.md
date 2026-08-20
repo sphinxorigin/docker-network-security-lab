@@ -1,257 +1,190 @@
-# HTW Rechnernetze Lab mit Docker Compose
+# Docker Network Security Lab
 
-Dieses Repository enthält meine lokale Rekonstruktion eines Docker-basierten Netzwerk-Labs aus dem Modul **Rechnernetze** an der HTW Berlin. Ziel des ursprünglichen Projekts war es, ein mehrstufiges Netzwerk mit Routing, Firewalling, NAT, DHCP und DNS aufzubauen und lokal lauffähig zu machen.
+This project is based on a network lab from my Computer Networks module at HTW Berlin. I later rebuilt it locally with Docker Compose because I wanted to understand the network setup better and keep it as a portfolio project.
 
-Nach der erfolgreichen Umsetzung habe ich das Projekt zusätzlich erweitert, um erste Security-Tests in einer isolierten Lernumgebung durchführen zu können.
+The main focus of this project is networking: routing, NAT, firewall rules, DNS, DHCP and port forwarding between multiple Docker containers. After the network was working, I added a small vulnerable login page to the webserver to simulate a basic SQL injection in a controlled local environment.
 
-## Projektziel
+## Project Background
 
-Das ursprüngliche Ziel war nicht die Durchführung eines Pentests, sondern der Aufbau und die Konfiguration einer realistischen Netzwerktopologie mit mehreren getrennten Bereichen.
+The original HTW project was not a pentest project. It was mainly about building and configuring a multi-zone network.
 
-Im Fokus standen dabei:
+At the time, I focused mostly on getting the network tasks done. Later, I decided to reconstruct the setup locally, document it properly and extend it a bit so I could also practice basic web security concepts inside the same lab.
 
-```text
-Routing
-Firewall-Regeln
-NAT
-Port-Forwarding
-DHCP
-DNS
-Docker-Netzwerke
-Linux-Netzwerktools
-```
+## Network Overview
 
-Durch das Projekt konnte ich besser nachvollziehen, wie Pakete durch verschiedene Netzbereiche laufen, wie Router miteinander kommunizieren und wie Firewall- und NAT-Regeln die Erreichbarkeit beeinflussen.
-
-## Netzwerktopologie
-
-Das Lab besteht aus elf Containern und mehreren getrennten Docker-Netzwerken.
+The lab contains multiple Docker containers that represent different parts of the network.
 
 ```text
-ISP-Mesh:
+ISP network:
 i2, i3, i4, i5
 
-Service-Netz:
+Service network:
 dns, webserver
 
-Subscription-Netz:
+Subscription network:
 homerouter, client1, client2, client3, gameserver
 ```
 
-Der `homerouter` verbindet das Subscription-Netz mit dem ISP-Netz. Der `webserver` befindet sich im Service-Netz. Der `gameserver` liegt hinter dem HomeRouter im internen Netz und ist über Port-Forwarding erreichbar.
+The `homerouter` connects the internal subscription network with the ISP network. The `webserver` and `dns` server are located in the service network. The `gameserver` is placed behind the home router and can be reached through port forwarding.
 
+## Network Topology
 
-## Umsetzung
+The following diagram shows the logical topology that I used as a reference for the Docker Compose setup.
 
-Die ursprünglichen Startup-Skripte wurden nicht direkt überschrieben. Stattdessen wurden sie als `original_<name>_startup.sh` gespeichert. Dadurch bleibt nachvollziehbar, welche Logik aus dem ursprünglichen Rechnernetze-Lab stammt und welche Anpassungen für den lokalen Betrieb mit Docker Compose ergänzt wurden.
+![Network Topology](docs/network-topology.png)
 
-Für die lokale Ausführung auf meinem Rechner waren mehrere Anpassungen notwendig. Dazu gehören feste Docker-Subnetze, eigene Gateways, Interface-Umbenennungen und zusätzliche Routing-Regeln.
+In my Docker setup, the switches from the diagram are represented by Docker bridge networks. I also had to add some Docker-specific adjustments, for example custom subnets, gateway addresses, interface renaming and additional routes.
 
-## Technische Anpassungen
+## What I Built
 
-Docker vergibt Interface-Namen und Gateway-Adressen teilweise anders, als es die ursprünglichen Skripte erwarten. Deshalb wurden kleine Kompatibilitäts-Layer ergänzt.
+This project includes:
 
-Dazu gehören:
+- a multi-container network setup with Docker Compose
+- separated ISP, service and subscription networks
+- static routing between network zones
+- NAT for internet access
+- port forwarding from the home router to the internal gameserver
+- DNS for internal hostnames
+- a local webserver
+- a simple vulnerable login page for SQL injection testing
 
-```text
-feste MAC-Adressen in docker-compose.yml
-Interface-Umbenennung über rename_by_subnet.sh
-angepasste Docker-Gateways
-zusätzliche statische Routen
-NAT-Regeln für Internetzugang
-DNAT und MASQUERADE für Port-Forwarding
-```
-
-Ein Beispiel war das Service-Netz. Docker hätte standardmäßig `100.24.0.1` als Gateway verwendet. Diese Adresse wird im Lab aber von `i4` benötigt. Deshalb wurde das Docker-Gateway auf `100.24.0.254` gelegt.
-
-## Ergänzte Routen
-
-Beim Testen ist aufgefallen, dass einige Router keine passenden Routen zum Subscription-Netz hatten. Dadurch konnten Pakete aus dem Service-Netz den HomeRouter und den Gameserver nicht zuverlässig erreichen.
-
-Deshalb wurden zusätzliche Routen ergänzt:
+## Repository Structure
 
 ```text
-i2 → Subscription-Netz über i5
-i4 → Subscription-Netz über i5
-i3 → Subscription-Netz über i4
+docker-network-security-lab/
+├── docker-compose.yml
+├── README.md
+├── .gitignore
+├── docs/
+│   └── network-topology.png
+├── webserver/
+│   ├── Dockerfile
+│   ├── app.py
+│   ├── entrypoint.sh
+│   ├── original_webserver_startup.sh
+│   └── rename_by_subnet.sh
+├── dns/
+├── homerouter/
+├── gameserver/
+├── i2/
+├── i3/
+├── i4/
+├── i5/
+├── client1/
+├── client2/
+├── client3/
+└── report/
+    └── SQLInjection.md
 ```
 
-Diese Ergänzung war notwendig, damit die Kommunikation zwischen Service-Netz und Subscription-Netz funktioniert.
+## Local Reconstruction
 
-## Gelöste Netzwerkprobleme
+The original startup scripts were kept as `original_<name>_startup.sh` files. I added wrapper and entrypoint scripts around them so the lab can run locally with Docker Compose.
 
-Während der Umsetzung sind mehrere typische Netzwerkprobleme aufgetreten, die ich Schritt für Schritt analysiert und gelöst habe.
+This was necessary because Docker Desktop does not always use the same interface names or gateway behavior that the original lab expected.
 
-Ein Problem war, dass Clients das Internet nicht erreichen konnten. Die Ursache lag bei `i2`, weil das Internet-Interface nicht korrekt aktiv war und keine passende Default-Route zum Docker-Gateway gesetzt war.
+## Problems I Had to Solve
 
-Ein weiteres Problem war das Port-Forwarding zum Gameserver. Die DNAT-Regel wurde zwar getroffen, aber die TCP-Verbindung funktionierte erst stabil, nachdem zusätzlich eine passende MASQUERADE-Regel für den Rückweg ergänzt wurde.
+While rebuilding the lab, I had to debug several networking issues.
 
-Außerdem gab es eine IP-Kollision im Service-Netz, weil Docker und `i4` dieselbe Gateway-Adresse verwendet haben. Dieses Problem wurde durch ein separates Docker-Gateway gelöst.
+Some examples:
 
-## Eigene Security-Erweiterung
+- Docker used a gateway address that conflicted with one of the lab routers
+- some containers had missing routes to the subscription network
+- interface names inside containers did not match the original scripts
+- internet access from internal clients did not work at first
+- port forwarding to the gameserver needed both DNAT and MASQUERADE to work correctly
 
-Das ursprüngliche HTW-Projekt hatte nicht das Ziel, einen Pentest oder eine Angriffssimulation durchzuführen. Der Fokus lag zuerst klar auf Netzwerktechnik.
+One concrete example was the gameserver connection. The DNAT rule forwarded the traffic to the internal gameserver, but the response path was not correct at first. The connection only worked after adding the correct MASQUERADE rule.
 
-Nachdem das Netzwerk stabil funktioniert hat, habe ich es mit Unterstützung von KI erweitert. Ich habe auf dem `webserver` eine einfache HTML/Login-Seite über eine Flask-App eingebaut. In dieser kontrollierten Laborumgebung habe ich anschließend eine SQL-Injection simuliert.
+## Security Extension
 
-Dadurch konnte ich nicht nur das Netzwerk testen, sondern auch nachvollziehen, wie eine einfache Web-Schwachstelle in einem realistischeren Netzwerkaufbau aussehen kann.
+After the network was working, I added a small Flask login page to the `webserver`.
 
-Die Erweiterung ist bewusst einfach gehalten und dient nur Lernzwecken. Es geht nicht darum, ein fertiges Pentest-Lab bereitzustellen, sondern darum, die Verbindung zwischen Netzwerktechnik und grundlegender Web Security praktisch zu verstehen.
+This part was not included in the original HTW project. I added it later with help from AI so I could simulate a basic SQL injection in my own local lab.
 
-## Sicherheitshinweis
+The login page is intentionally insecure. It is only used to understand how SQL injection can happen when user input is inserted directly into a SQL query.
 
-Dieses Projekt ist ausschließlich für lokale Lernzwecke gedacht. Die verwundbaren Komponenten sind absichtlich unsicher gebaut.
-
-Das Lab sollte nicht ins öffentliche Internet gestellt werden. Es sollten keine echten Zugangsdaten, keine echten Kundendaten und keine produktiven Systeme verwendet werden.
-
-## Voraussetzungen
-
-Benötigt wird:
-
-```text
-Docker Desktop für Mac
-Docker Compose V2
-```
-
-Die installierte Version kann geprüft werden mit:
-
-```bash
-docker compose version
-```
-
-## Starten
-
-Im Projektordner:
-
-```bash
-docker compose up --build -d
-```
-
-Dadurch werden alle Container gebaut und im Hintergrund gestartet.
-
-## Stoppen
-
-```bash
-docker compose down
-```
-
-Wenn alle Docker-Netzwerke vollständig neu erstellt werden sollen:
-
-```bash
-docker compose down
-docker compose up --build -d
-```
-
-## Webportal öffnen
-
-Die lokal erweiterte Webanwendung ist erreichbar unter:
-
-```text
-http://127.0.0.1:8082/
-```
-
-Normale Test-Zugangsdaten:
-
-```text
-Username: admin
-Password: admin123
-```
-
-## Funktionstests
-
-Internetverbindung eines Clients testen:
-
-```bash
-docker compose exec client1 ping -c 3 8.8.8.8
-```
-
-Erwartetes Ergebnis:
-
-```text
-3 packets transmitted, 3 received, 0% packet loss
-```
-
-Webserver erreicht den HomeRouter:
-
-```bash
-docker compose exec webserver ping -c 3 10.10.0.2
-```
-
-Port-Forwarding zum internen Gameserver testen:
-
-```bash
-docker compose exec webserver nc -vz -w 3 10.10.0.2 12933
-```
-
-Erwartetes Ergebnis:
-
-```text
-10.10.0.2 12933 open
-```
-
-Direkter Test vom HomeRouter zum Gameserver:
-
-```bash
-docker compose exec homerouter nc -vz -w 3 192.168.1.10 12933
-```
-
-## SQL-Injection Simulation
-
-Die Login-Seite wurde bewusst unsicher umgesetzt, damit eine SQL-Injection in einer isolierten Umgebung nachvollzogen werden kann.
-
-Beispiel für den Test:
+Example payload used in the lab:
 
 ```text
 Username: admin' OR '1'='1
 Password: test
 ```
 
-Dadurch kann der Login in der Lab-Umgebung umgangen werden. Dieser Teil dient nur dazu, das Prinzip einer SQL-Injection besser zu verstehen und später sauber zu dokumentieren.
-
-## Aktueller Status
-
-Folgende Punkte wurden umgesetzt und getestet:
+The SQL injection simulation is documented here:
 
 ```text
-Client → Internet: funktioniert
-Webserver → HomeRouter: funktioniert
-Webserver → Gameserver über Port 12933: funktioniert
-DNS im Service-Netz: vorhanden
-Lokales Webportal mit Login-Seite: erreichbar
-SQL-Injection Simulation: funktioniert
+report/SQLInjection.md
 ```
 
-## Geplante Dokumentation
+## How to Run
 
-Im Ordner `report/` wird ein einfacher Report gepflegt. Dort dokumentiere ich die durchgeführten Tests, die Beobachtungen und mögliche Gegenmaßnahmen.
+Start the lab:
 
-Geplante Inhalte:
+```bash
+docker compose up --build -d
+```
+
+Stop the lab:
+
+```bash
+docker compose down
+```
+
+Open the local web portal:
 
 ```text
-Finding 1: SQL-Injection im Login
-Beschreibung der Ursache
-Auswirkung der Schwachstelle
-Nachweis mit Test-Payload
-Mögliche Gegenmaßnahmen
+http://127.0.0.1:8082/
 ```
 
-## Was ich aus dem Projekt gelernt habe
-
-Durch das Projekt habe ich gelernt, wie wichtig sauberes Routing, korrekte Gateway-Adressen und passende NAT-Regeln sind. Viele Fehler waren nicht direkt offensichtlich, sondern mussten über einzelne Tests entlang des Paketwegs eingegrenzt werden.
-
-Besonders hilfreich war es, jeden Abschnitt einzeln zu prüfen:
+Default test login:
 
 ```text
-Client → Router
-Router → ISP
-ISP → Internet
-Webserver → HomeRouter
-HomeRouter → Gameserver
-Gameserver → Rückweg
+Username: admin
+Password: admin123
 ```
 
-Die spätere Security-Erweiterung hat mir zusätzlich gezeigt, wie Netzwerktechnik und Web Security zusammenhängen können.
+## Basic Network Tests
 
-## Hinweis zur KI-Unterstützung
+Test internet access from a client:
 
-Bei der Erweiterung und beim Debugging habe ich KI als Unterstützung genutzt. Die Entscheidungen, Tests und Anpassungen wurden aber Schritt für Schritt lokal ausgeführt und überprüft. Dadurch konnte ich die Fehler nicht nur beheben, sondern auch besser verstehen.
+```bash
+docker compose exec client1 ping -c 3 8.8.8.8
+```
+
+Test access from the webserver to the home router:
+
+```bash
+docker compose exec webserver ping -c 3 10.10.0.2
+```
+
+Test port forwarding to the internal gameserver:
+
+```bash
+docker compose exec webserver nc -vz -w 3 10.10.0.2 12933
+```
+
+## Current Status
+
+```text
+Client internet access: working
+DNS service: available
+Webserver: reachable
+HomeRouter routing: working
+Gameserver port forwarding: working
+Local login page: working
+SQL injection simulation: working
+```
+
+## What I Learned
+
+This project helped me understand networking much more practically.
+
+Instead of only looking at routing tables in theory, I had to test the path of packets step by step. I learned how small mistakes in routes, gateways or NAT rules can break communication between networks.
+
+The later SQL injection part also helped me see how web security can be tested inside a realistic network setup, even if the web application itself is very simple.
+
+## Disclaimer
+
+The SQL injection part is only meant for my local lab, so I would not expose it to the internet or use it with real data.
