@@ -31,7 +31,7 @@ The `homerouter` connects the internal subscription network with the ISP network
 
 The following diagram shows the logical topology that I used as a reference for the Docker Compose setup.
 
-![Network Topology](docs/network-topology.png)
+![Network Topology](docs:network-topology.png)
 
 In my Docker setup, the switches from the diagram are represented by Docker bridge networks. I also had to add some Docker-specific adjustments, for example custom subnets, gateway addresses, interface renaming and additional routes.
 
