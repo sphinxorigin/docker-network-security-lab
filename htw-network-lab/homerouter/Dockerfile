@@ -6,9 +6,9 @@ RUN apt-get update && \
 
 RUN echo "root ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
-COPY original_homerouter_startup.sh /original_homerouter_startup.sh
+COPY homerouter_startup.sh /homerouter_startup.sh
 COPY rename_by_subnet.sh /rename_by_subnet.sh
 COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /original_homerouter_startup.sh /rename_by_subnet.sh /entrypoint.sh
+RUN chmod +x /homerouter_startup.sh /rename_by_subnet.sh /entrypoint.sh
 
 ENTRYPOINT ["/entrypoint.sh"]
