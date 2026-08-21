@@ -1,71 +1,71 @@
-# SQL-Injection Simulation
+# SQL Injection Simulation
 
-## 1. Einordnung
+## 1. Background
 
-Diese Datei dokumentiert eine kleine Security-Erweiterung meines lokalen HTW-Rechnernetze-Labs. Das ursprüngliche Projekt hatte nicht das Ziel, einen Pentest durchzuführen. Der Fokus lag zuerst auf Netzwerktechnik, also Routing, Firewalling, NAT, DHCP, DNS und Docker-Netzwerken.
+This file documents a small security extension of my local HTW computer networks lab. The original project was not a pentest project. The main focus was networking, especially routing, NAT, firewall rules, DHCP, DNS and Docker networks.
 
-Nachdem das Netzwerk stabil funktioniert hat, habe ich den Webserver mit Unterstützung von KI um eine einfache HTML/Login-Seite erweitert. Ziel war es, in einer isolierten lokalen Umgebung eine SQL-Injection zu simulieren und das Prinzip dahinter besser zu verstehen.
+After the network was working, I added a simple Flask login page to the webserver with help from AI. My goal was to simulate a basic SQL injection in my own local lab and understand the idea behind it better.
 
-## 2. Testumgebung
+## 2. Test Environment
 
-Die Simulation wurde ausschließlich lokal in Docker durchgeführt.
+The test was done only locally with Docker Compose.
 
 ```text
-Host: lokaler Rechner
-Umgebung: Docker Compose
-Ziel: webserver Container
-Web-App: einfache Flask Login-Seite
+Host: local machine
+Environment: Docker Compose
+Target: webserver container
+Web app: simple Flask login page
 URL: http://127.0.0.1:8082/
 ```
 
-Die Anwendung ist absichtlich unsicher gebaut und nicht für produktive Nutzung gedacht.
+The login page was intentionally built insecurely for learning purposes. It is not meant for real use.
 
-## 3. Ziel der Simulation
+## 3. Goal
 
-Das Ziel war nicht, ein echtes System anzugreifen, sondern zu verstehen, wie eine SQL-Injection im Login-Bereich funktionieren kann.
+The goal was not to attack a real system. I only wanted to understand how a SQL injection can happen in a login form.
 
-Dabei ging es vor allem um diese Fragen:
+The main questions for me were:
 
 ```text
-Wie verarbeitet eine Login-Funktion Benutzereingaben?
-Warum ist direkte String-Verkettung in SQL-Abfragen gefährlich?
-Wie kann eine manipulierte Eingabe die Login-Logik verändern?
-Wie kann man diese Schwachstelle verhindern?
+How does a login form handle user input?
+Why is direct string formatting in SQL queries dangerous?
+How can one input change the logic of a query?
+How can this problem be fixed?
 ```
 
-## 4. Unsichere Login-Abfrage
+## 4. Vulnerable Code
 
-In der Flask-Anwendung wurde die SQL-Abfrage bewusst unsicher aufgebaut.
+In the Flask app, the SQL query was built in an unsafe way.
 
 ```python
 query = f"SELECT * FROM users WHERE username = '{username}' AND password = '{password}'"
 ```
 
-Das Problem ist, dass die Eingaben aus dem Login-Formular direkt in die SQL-Abfrage eingesetzt werden. Dadurch kann eine Eingabe nicht nur als normaler Text behandelt werden, sondern die Struktur der SQL-Abfrage verändern.
+The problem is that the user input is inserted directly into the SQL query. Because of that, the input is not only treated as text, but can also change the structure of the query.
 
-## 5. Test-Payload
+## 5. Test Payload
 
-Für die Simulation wurde folgender Benutzername verwendet:
+I used this username in the login form:
 
 ```text
 admin' OR '1'='1
 ```
 
-Als Passwort wurde ein beliebiger Wert eingetragen:
+For the password, I used a random value:
 
 ```text
 test
 ```
 
-## 6. Beobachtung
+## 6. Result
 
-Mit dieser Eingabe konnte der Login in der lokalen Lab-Umgebung umgangen werden. Die Anwendung hat den Zugriff auf das Dashboard erlaubt, obwohl kein gültiges Passwort eingegeben wurde.
+With this input, I was able to bypass the login in my local lab. The application allowed access to the dashboard even though the correct password was not used.
 
-Die manipulierte Eingabe sorgt dafür, dass die Bedingung in der SQL-Abfrage immer wahr wird.
+The reason is that the injected condition can make the SQL query return true.
 
-## 7. Vereinfachtes Beispiel
+## 7. Simplified Example
 
-Normalerweise soll die Abfrage prüfen:
+A normal login query should check something like this:
 
 ```sql
 SELECT * FROM users
@@ -73,7 +73,7 @@ WHERE username = 'admin'
 AND password = 'admin123';
 ```
 
-Durch die manipulierte Eingabe entsteht sinngemäß eine Abfrage, bei der die Bedingung immer wahr werden kann:
+With the manipulated input, the logic changes in a way that can make the condition true:
 
 ```sql
 SELECT * FROM users
@@ -81,23 +81,23 @@ WHERE username = 'admin' OR '1'='1'
 AND password = 'test';
 ```
 
-Damit wird die eigentliche Passwortprüfung umgangen.
+This shows how the password check can be bypassed if the input is handled unsafely.
 
-## 8. Auswirkung
+## 8. Impact
 
-Wenn eine solche Schwachstelle in einer echten Anwendung vorhanden wäre, könnte sich ein Angreifer unter Umständen ohne gültige Zugangsdaten anmelden.
+In a real application, this type of vulnerability could allow someone to log in without valid credentials.
 
-In meinem Projekt wurde diese Schwachstelle aber nur absichtlich in einer lokalen Lernumgebung eingebaut.
+In my project, this was only simulated inside a local Docker lab.
 
-## 9. Ursache
+## 9. Cause
 
-Die Ursache liegt darin, dass Benutzereingaben direkt in eine SQL-Abfrage eingefügt werden. Die Anwendung trennt nicht sauber zwischen Daten und SQL-Code.
+The cause is direct string formatting inside the SQL query. The application does not separate user input from SQL code.
 
-Das ist ein typischer Fehler bei unsicherer Eingabeverarbeitung.
+This is a common mistake when user input is not handled safely.
 
-## 10. Sichere Umsetzung
+## 10. Secure Version
 
-Eine sichere Variante nutzt parametrisierte SQL-Abfragen.
+A safer version would use a parameterized query.
 
 ```python
 cur.execute(
@@ -106,28 +106,28 @@ cur.execute(
 )
 ```
 
-Dabei werden Eingaben als Daten behandelt und nicht als ausführbarer Teil der SQL-Abfrage.
+With this approach, the input is treated as data and not as executable SQL logic.
 
-## 11. Weitere Gegenmaßnahmen
+## 11. Additional Fixes
 
-Zusätzlich zu parametrisierten SQL-Abfragen wären weitere Schutzmaßnahmen sinnvoll:
+Other improvements would also be important:
 
 ```text
-Passwörter niemals im Klartext speichern
-Passwörter mit Hashing speichern
-Eingaben validieren
-Fehlermeldungen nicht zu detailliert ausgeben
-Logging für verdächtige Login-Versuche einbauen
+Do not store passwords in plain text
+Use password hashing
+Validate user input
+Avoid detailed error messages
+Log suspicious login attempts
 ```
 
-## 12. Lernziel
+## 12. What I Learned
 
-Durch die Simulation konnte ich nachvollziehen, warum SQL-Injection eine kritische Schwachstelle ist. Besonders wichtig war für mich zu verstehen, dass das Problem nicht durch das Netzwerk entsteht, sondern durch unsichere Verarbeitung in der Webanwendung.
+This simulation helped me understand why SQL injection is a serious issue. The problem was not caused by the network itself, but by the way the web application handled input.
 
-Das Netzwerk-Lab macht die Simulation trotzdem realistischer, weil die Webanwendung in eine größere Umgebung mit mehreren Netzwerkzonen eingebettet ist.
+Still, using my network lab made the test more useful for me, because the vulnerable webserver was part of a larger Docker network with different zones.
 
-## 13. Fazit
+## 13. Conclusion
 
-Die SQL-Injection-Simulation war eine nachträgliche Erweiterung meines Rechnernetze-Projekts. Sie zeigt, wie Netzwerktechnik und Web Security zusammenhängen können.
+The SQL injection part was added later as a small extension to my computer networks project.
 
-Das Projekt bleibt hauptsächlich ein Docker-basiertes Netzwerk-Lab, wurde aber um eine einfache Security-Komponente ergänzt, um grundlegende Web-Sicherheitskonzepte praktisch zu verstehen.
+The main project is still a Docker-based network lab. The security part only adds a simple practical example to connect networking basics with web security basics.
